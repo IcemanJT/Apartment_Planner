@@ -1,0 +1,3 @@
+"""
+ciecie prostokata liniami
+"""
