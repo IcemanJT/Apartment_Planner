@@ -2,36 +2,34 @@ import random
 from deap import base, creator, tools
 import matplotlib.pyplot as plt
 
-# Definicja problemu - maksymalizacja dopasowania
+
 creator.create("FitnessMax", base.Fitness, weights=(1.0,))
 creator.create("Individual", list, fitness=creator.FitnessMax)
 
-# Parametry mieszkania
-WIDTH = 20  # Szerokość mieszkania
-HEIGHT = 15  # Wysokość mieszkania
+WIDTH = 20
+HEIGHT = 15
 
-# Parametry oczekiwane
-NUM_SMALL = 15
-NUM_LARGE = 3
+NUM_SMALL = 12
+NUM_LARGE = 5
 
-# Funkcja generująca losowe pomieszczenie
-def random_room():
-    room_type = random.choice(["small", "large"])
-    width = random.randint(1, 5) if room_type == "small" else random.randint(4, 10)
-    height = random.randint(1, 5) if room_type == "small" else random.randint(4, 10)
+
+def random_room(room_type):
+    width = random.randint(1, 5) if room_type == "small" else random.randint(5, 10)
+    height = random.randint(1, 5) if room_type == "small" else random.randint(5, 10)
     x = random.randint(0, WIDTH - width)
     y = random.randint(0, HEIGHT - height)
     return (x, y, width, height, room_type)
 
-# Inicjalizacja populacji
+
 def init_individual():
-    num_rooms = NUM_SMALL + NUM_LARGE
-    return creator.Individual([random_room() for _ in range(num_rooms)])
+    rooms = ["large"] * NUM_LARGE + ["small"] * NUM_SMALL
+    return creator.Individual([random_room(type) for type in rooms])
+
 
 def init_population(n):
     return [init_individual() for _ in range(n)]
 
-# Funkcja oceny
+
 def evaluate(ind):
     covered_area = [[0 for _ in range(WIDTH)] for _ in range(HEIGHT)]
     overlap = 0
@@ -47,24 +45,13 @@ def evaluate(ind):
     total_area = sum(sum(row) for row in covered_area)
     holes = WIDTH * HEIGHT - total_area
 
-    small_count = sum(1 for room in ind if room[4] == "small")
-    large_count = sum(1 for room in ind if room[4] == "large")
+    return -(overlap * 2 + holes),
 
-    size_penalty = abs(small_count - NUM_SMALL) + abs(large_count - NUM_LARGE)
 
-    return -(overlap + holes * 4 + size_penalty),
-
-# Operatory genetyczne
 def mutate(ind):
-    if random.random() < 0.5:
-        index = random.randint(0, len(ind) - 1)  # Losowy indeks pomieszczenia
-        room = list(ind[index])
-        room[0] = random.randint(0, WIDTH - room[2])  # Nowe losowe x
-        room[1] = random.randint(0, HEIGHT - room[3])  # Nowe losowe y
-        ind[index] = tuple(room)  # Nadpisanie w rozwiązaniu
-    else:
-        index = random.randint(0, len(ind) - 1)
-        ind[index] = random_room()  # Całkowicie nowe pomieszczenie
+    index = random.randint(0, len(ind) - 1)
+    type = ind[index][4]
+    ind[index] = random_room(type)
     return ind,
 
 
@@ -79,9 +66,9 @@ toolbox.register("select", tools.selTournament, tournsize=3)
 
 # Główna pętla ewolucyjna
 def main():
-    pop = toolbox.population(n=50)
-    NGEN = 1000
-    CXPB, MUTPB = 0.5, 0.2
+    pop = toolbox.population(n=200)
+    NGEN = 2000
+    CXPB, MUTPB = 0.75, 0.35
 
     for gen in range(NGEN):
         offspring = toolbox.select(pop, len(pop))
@@ -119,10 +106,9 @@ def draw_solution(ind):
     for room in ind:
         x, y, w, h, room_type = room
         color = 'blue' if room_type == "small" else 'red'
-        plt.gca().add_patch(plt.Rectangle((x, y), w, h, edgecolor='black', facecolor=color, alpha=0.5))
+        plt.gca().add_patch(plt.Rectangle((x, y), w, h, edgecolor='black', facecolor=color, alpha=0.5, linewidth=2))
     plt.xlim(0, WIDTH)
     plt.ylim(0, HEIGHT)
-    plt.grid(True)
     plt.show()
 
 if __name__ == "__main__":
